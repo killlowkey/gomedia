@@ -277,7 +277,7 @@ func (impl *ServerHandleImpl) HandleAnnounce(svr *rtsp.RtspServer, req rtsp.Rtsp
 	impl.sess.name = streamName
 	impl.sess.isProducer = true
 	if atrack, found := tracks["audio"]; found {
-		afile, err := os.OpenFile("rtsp.aac", os.O_CREATE|os.O_RDWR, 0666)
+		afile, err := os.OpenFile("./testData/test.aac", os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -296,7 +296,7 @@ func (impl *ServerHandleImpl) HandleAnnounce(svr *rtsp.RtspServer, req rtsp.Rtsp
 	}
 
 	if vtrack, found := tracks["video"]; found {
-		vfile, err := os.OpenFile("rtsp.h265", os.O_CREATE|os.O_RDWR, 0666)
+		vfile, err := os.OpenFile("./testData/test.h265", os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -363,6 +363,7 @@ func (impl *ServerHandleImpl) HandleResponse(svr *rtsp.RtspServer, res rtsp.Rtsp
 
 }
 
+// main ffplay rtsp://test:test123@127.0.0.1:554/test
 func main() {
 	addr := "0.0.0.0:554"
 	listen, err := net.Listen("tcp4", addr)
