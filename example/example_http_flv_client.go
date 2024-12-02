@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -14,12 +14,12 @@ const (
 	HTTPOK = 200
 )
 
-//.example_http_flv_client -i url -o out.flv
+// .example_http_flv_client -i url -o out.flv
 func main() {
 	flvurl, flvfilename := parseFlag()
 	flvfile, err := os.Create(flvfilename)
 	if err != nil {
-		fmt.Println("create flv file failed, err:", err)
+		log.Println("create flv file failed, err:", err)
 		return
 	}
 
@@ -27,12 +27,12 @@ func main() {
 
 	fr := flv.CreateFlvReader()
 	fr.OnFrame = func(ci codec.CodecID, b []byte, pts, dts uint32) {
-		fmt.Println("codec:", codec.CodecString(ci), " pts:", pts, " dts:", dts)
+		log.Println("codec:", codec.CodecString(ci), " pts:", pts, " dts:", dts)
 	}
 
 	resp, err := http.Get(flvurl)
 	if err != nil {
-		fmt.Println("http get failed, err:", err)
+		log.Println("http get failed, err:", err)
 		return
 	}
 
@@ -45,12 +45,12 @@ func main() {
 	for {
 		n, err := resp.Body.Read(buf)
 		if err != nil {
-			fmt.Println("read failed, err:", err)
+			log.Println("read failed, err:", err)
 			break
 		}
 
 		if n == 0 {
-			fmt.Println("read n=0")
+			log.Println("read n=0")
 			break
 		}
 
@@ -62,7 +62,7 @@ func main() {
 
 	resp.Body.Close()
 
-	fmt.Println("http flv client end")
+	log.Println("http flv client end")
 }
 
 func parseFlag() (url, flvfile string) {

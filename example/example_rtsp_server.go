@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -22,7 +22,7 @@ var g_manager *RtspSourceManager
 func init() {
 	g_manager = &RtspSourceManager{}
 	g_manager.sources = make(map[string]*StreamSource)
-	fmt.Println("int g_manager", g_manager)
+	log.Println("int g_manager", g_manager)
 }
 
 func (manager *RtspSourceManager) getSource(name string) (*StreamSource, bool) {
@@ -79,9 +79,9 @@ func (s *StreamSource) dispatch() {
 		// 通过管道接收到了音视频帧，发送给消费者 rtsp 客户端
 		case frame := <-s.producer.readChan:
 			if frame.frameType == 0 {
-				//	fmt.Println("video ts", frame.ts)
+				//	log.Println("video ts", frame.ts)
 				if s.videoCfg == nil {
-					fmt.Println("add video config")
+					log.Println("add video config")
 					s.videoCfg = &VideoConfig{}
 				}
 				if frame.cid == rtsp.RTSP_CODEC_H264 && (len(s.videoCfg.sps) == 0 || len(s.videoCfg.pps) == 0) {
@@ -104,15 +104,15 @@ func (s *StreamSource) dispatch() {
 						nalu_type := codec.H265NaluTypeWithoutStartCode(nalu)
 						switch nalu_type {
 						case codec.H265_NAL_PPS:
-							fmt.Println("got pps", len(nalu))
+							log.Println("got pps", len(nalu))
 							s.videoCfg.pps = make([]byte, len(nalu))
 							copy(s.videoCfg.pps, nalu)
 						case codec.H265_NAL_SPS:
-							fmt.Println("got sps")
+							log.Println("got sps")
 							s.videoCfg.sps = make([]byte, len(nalu))
 							copy(s.videoCfg.sps, nalu)
 						case codec.H265_NAL_VPS:
-							fmt.Println("got vps")
+							log.Println("got vps")
 							s.videoCfg.vps = make([]byte, len(nalu))
 							copy(s.videoCfg.vps, nalu)
 						}
@@ -122,7 +122,7 @@ func (s *StreamSource) dispatch() {
 			} else {
 				if s.audioCfg == nil {
 					s.audioCfg = &AudioConfig{}
-					fmt.Println("add audio config")
+					log.Println("add audio config")
 				}
 				if frame.cid == rtsp.RTSP_CODEC_AAC && len(s.audioCfg.asc) == 0 {
 					s.audioCfg.cid = codec.CODECID_AUDIO_AAC
@@ -175,7 +175,7 @@ func (sess *RtspServerSession) Start() {
 	for {
 		n, err := sess.c.Read(buf)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		svr.Input(buf[:n])
@@ -206,12 +206,12 @@ type ServerHandleImpl struct {
 }
 
 func (impl *ServerHandleImpl) HandleOption(svr *rtsp.RtspServer, req rtsp.RtspRequest, res *rtsp.RtspResponse) {
-	fmt.Println("handle option")
+	log.Println("handle option")
 }
 
 // HandleDescribe 音视频信息
 func (impl *ServerHandleImpl) HandleDescribe(svr *rtsp.RtspServer, req rtsp.RtspRequest, res *rtsp.RtspResponse) {
-	fmt.Println("handle describe")
+	log.Println("handle describe")
 	// 流名称 rtsp://xxx/streamName
 	streamName := req.Uri[strings.LastIndex(req.Uri, "/")+1:]
 	// 查找流
@@ -224,7 +224,7 @@ func (impl *ServerHandleImpl) HandleDescribe(svr *rtsp.RtspServer, req rtsp.Rtsp
 	// 音频 acc
 	if source.audioCfg != nil {
 		if source.audioCfg.cid == codec.CODECID_AUDIO_AAC {
-			fmt.Println("add audio track", source.audioCfg.sampleRate)
+			log.Println("add audio track", source.audioCfg.sampleRate)
 			audioCodec := rtsp.RtspCodec{
 				Cid:          rtsp.RTSP_CODEC_AAC,
 				PayloadType:  97,
@@ -240,13 +240,13 @@ func (impl *ServerHandleImpl) HandleDescribe(svr *rtsp.RtspServer, req rtsp.Rtsp
 	// 视频 h264 h265
 	if source.videoCfg != nil {
 		if source.videoCfg.cid == codec.CODECID_VIDEO_H264 {
-			fmt.Println("add video track")
+			log.Println("add video track")
 			fmtpHandle := sdp.NewH264FmtpParam(sdp.WithH264SPS(source.videoCfg.sps), sdp.WithH264PPS(source.videoCfg.pps))
 			videoTrack := rtsp.NewVideoTrack(rtsp.RtspCodec{Cid: rtsp.RTSP_CODEC_H264, PayloadType: 96, SampleRate: 90000}, rtsp.WithCodecParamHandler(fmtpHandle))
 			svr.AddTrack(videoTrack)
 			impl.sess.tracks["video"] = videoTrack
 		} else if source.videoCfg.cid == codec.CODECID_VIDEO_H265 {
-			fmt.Println("add video track")
+			log.Println("add video track")
 			fmtpHandle := sdp.NewH265FmtpParam(sdp.WithH265SPS(source.videoCfg.sps), sdp.WithH265PPS(source.videoCfg.pps), sdp.WithH265VPS(source.videoCfg.vps))
 			videoTrack := rtsp.NewVideoTrack(rtsp.RtspCodec{Cid: rtsp.RTSP_CODEC_H265, PayloadType: 98, SampleRate: 90000}, rtsp.WithCodecParamHandler(fmtpHandle))
 			svr.AddTrack(videoTrack)
@@ -256,7 +256,7 @@ func (impl *ServerHandleImpl) HandleDescribe(svr *rtsp.RtspServer, req rtsp.Rtsp
 }
 
 func (impl *ServerHandleImpl) HandleSetup(svr *rtsp.RtspServer, req rtsp.RtspRequest, res *rtsp.RtspResponse, transport *rtsp.RtspTransport, tracks *rtsp.RtspTrack) {
-	fmt.Println("handle setup", *transport)
+	log.Println("handle setup", *transport)
 	if transport.Proto == rtsp.UDP {
 		res.StatusCode = rtsp.Unsupported_Transport
 		return
@@ -265,11 +265,11 @@ func (impl *ServerHandleImpl) HandleSetup(svr *rtsp.RtspServer, req rtsp.RtspReq
 
 // HandleAnnounce 触发播放动作
 func (impl *ServerHandleImpl) HandleAnnounce(svr *rtsp.RtspServer, req rtsp.RtspRequest, tracks map[string]*rtsp.RtspTrack) {
-	fmt.Println("handle announce")
+	log.Println("handle announce")
 	streamName := req.Uri[strings.LastIndex(req.Uri, "/")+1:]
-	fmt.Println("stream name ", streamName)
+	log.Println("stream name ", streamName)
 	source := &StreamSource{}
-	fmt.Println(g_manager)
+	log.Println(g_manager)
 	// 遍历消费者，发送音视频帧
 	go source.dispatch()
 	g_manager.addSource(streamName, source)
@@ -279,7 +279,7 @@ func (impl *ServerHandleImpl) HandleAnnounce(svr *rtsp.RtspServer, req rtsp.Rtsp
 	if atrack, found := tracks["audio"]; found {
 		afile, err := os.OpenFile("./testData/test.aac", os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		atrack.OnSample(func(sample rtsp.RtspSample) {
@@ -298,7 +298,7 @@ func (impl *ServerHandleImpl) HandleAnnounce(svr *rtsp.RtspServer, req rtsp.Rtsp
 	if vtrack, found := tracks["video"]; found {
 		vfile, err := os.OpenFile("./testData/test.h265", os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		vtrack.OnSample(func(sample rtsp.RtspSample) {
@@ -308,7 +308,7 @@ func (impl *ServerHandleImpl) HandleAnnounce(svr *rtsp.RtspServer, req rtsp.Rtsp
 				frame:     make([]byte, len(sample.Sample)),
 				ts:        sample.Timestamp,
 			}
-			//fmt.Println("onsample", frame.ts)
+			//log.Println("onsample", frame.ts)
 			copy(frame.frame, sample.Sample)
 			if sample.Cid == rtsp.RTSP_CODEC_H264 {
 				if codec.H264NaluType(frame.frame) == codec.H264_NAL_I_SLICE {
@@ -328,7 +328,7 @@ func (impl *ServerHandleImpl) HandleAnnounce(svr *rtsp.RtspServer, req rtsp.Rtsp
 
 // HandlePlay 播放指令
 func (impl *ServerHandleImpl) HandlePlay(svr *rtsp.RtspServer, req rtsp.RtspRequest, res *rtsp.RtspResponse, timeRange *rtsp.RangeTime, info []*rtsp.RtpInfo) {
-	fmt.Println("handle play")
+	log.Println("handle play")
 	streamName := req.Uri[strings.LastIndex(req.Uri, "/")+1:]
 	source, found := g_manager.getSource(streamName)
 	if !found {
@@ -368,7 +368,7 @@ func main() {
 	addr := "0.0.0.0:554"
 	listen, err := net.Listen("tcp4", addr)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer listen.Close()

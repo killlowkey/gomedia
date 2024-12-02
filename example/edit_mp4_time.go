@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 
@@ -42,13 +42,13 @@ Loop:
 			err = errors.New("mp4 Parser error")
 			break
 		}
-		fmt.Println(string(basebox.Type[:]))
+		log.Println(string(basebox.Type[:]))
 		tagName := mov_tag(basebox.Type)
 		switch tagName {
 		case mov_tag([4]byte{'m', 'o', 'o', 'v'}):
-			fmt.Println("Got moov box")
+			log.Println("Got moov box")
 		case mov_tag([4]byte{'m', 'v', 'h', 'd'}):
-			fmt.Println("Got mvhd box")
+			log.Println("Got mvhd box")
 			offset, _ := mp4Fd.Seek(0, io.SeekCurrent)
 			mvhd := mp4.MovieHeaderBox{Box: new(mp4.FullBox)}
 			if _, err = mvhd.Decode(mp4Fd); err != nil {
@@ -68,11 +68,11 @@ Loop:
 			}
 			mp4Fd.Seek(offset2, io.SeekStart)
 		case mov_tag([4]byte{'t', 'r', 'a', 'k'}):
-			fmt.Println("Got trak box")
+			log.Println("Got trak box")
 		case mov_tag([4]byte{'m', 'd', 'i', 'a'}):
-			fmt.Println("Got mdia box")
+			log.Println("Got mdia box")
 		case mov_tag([4]byte{'m', 'd', 'h', 'd'}):
-			fmt.Println("Got mdhd box")
+			log.Println("Got mdhd box")
 			offset, _ := mp4Fd.Seek(0, io.SeekCurrent)
 			mdhd := mp4.MediaHeaderBox{Box: new(mp4.FullBox)}
 			if _, err = mdhd.Decode(mp4Fd); err != nil {
@@ -92,7 +92,7 @@ Loop:
 			}
 			mp4Fd.Seek(offset2, io.SeekStart)
 		case mov_tag([4]byte{'t', 'k', 'h', 'd'}):
-			fmt.Println("Got tkhd box")
+			log.Println("Got tkhd box")
 			offset, _ := mp4Fd.Seek(0, io.SeekCurrent)
 			tkhd := mp4.TrackHeaderBox{Box: new(mp4.FullBox)}
 			if _, err = tkhd.Decode(mp4Fd); err != nil {

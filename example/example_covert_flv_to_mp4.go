@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/yapingcat/gomedia/go-codec"
@@ -13,14 +13,14 @@ func main() {
 	mp4filename := "test2.mp4"
 	mp4file, err := os.OpenFile(mp4filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer mp4file.Close()
 
 	muxer, err := mp4.CreateMp4Muxer(mp4file)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	hasVideo := false
@@ -40,7 +40,7 @@ func main() {
 			}
 			err := muxer.Write(atid, b, uint64(pts), uint64(dts))
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
 		} else if ci == codec.CODECID_VIDEO_H264 {
 			if !hasVideo {
@@ -49,7 +49,7 @@ func main() {
 			}
 			err := muxer.Write(vtid, b, uint64(pts), uint64(dts))
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
 		}
 	}
@@ -58,7 +58,7 @@ func main() {
 	for {
 		n, err := flvfilereader.Read(cache)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		fr.Input(cache[0:n])

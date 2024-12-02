@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -58,16 +59,16 @@ func generateH265M3U8(f string) {
 	filename := fmt.Sprintf("hevcstream-%d.mp4", i)
 	mp4file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	muxer, err = mp4.CreateMp4Muxer(mp4file, mp4.WithMp4Flag(mp4.MP4_FLAG_DASH))
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	muxer.OnNewFragment(func(duration uint32, firstPts, firstDts uint64) {
-		fmt.Println("on segment", duration)
+		log.Println("on segment", duration)
 		hls.segments = append(hls.segments, hlsSegment{
 			uri:      filename,
 			duration: float32(duration) / 1000,
@@ -85,7 +86,7 @@ func generateH265M3U8(f string) {
 		filename = fmt.Sprintf("hevcstream-%d.mp4", i)
 		mp4file, err = os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		muxer.ReBindWriter(mp4file)
@@ -99,7 +100,7 @@ func generateH265M3U8(f string) {
 	demuxer := mp4.CreateMp4Demuxer(mp4fileReader)
 	headInfo, err := demuxer.ReadHead()
 	if err != nil && err != io.EOF {
-		fmt.Println(err)
+		log.Println(err)
 	} else {
 		fmt.Printf("%+v\n", headInfo)
 	}
@@ -107,7 +108,7 @@ func generateH265M3U8(f string) {
 	for {
 		pkg, err := demuxer.ReadPacket()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		if pkg.Cid == mp4.MP4_CODEC_H265 {
@@ -128,7 +129,7 @@ func generateH265M3U8(f string) {
 func onH265HLSVod(w http.ResponseWriter, r *http.Request) {
 	buf := bytes.NewBuffer(make([]byte, 0, 1024*1024))
 	if strings.LastIndex(r.URL.Path, "m3u8") != -1 {
-		fmt.Println("request m3u8", r.URL.Path)
+		log.Println("request m3u8", r.URL.Path)
 		m3u8, err := os.Open("test.m3u8")
 		if err != nil {
 			return
@@ -138,7 +139,7 @@ func onH265HLSVod(w http.ResponseWriter, r *http.Request) {
 		buf.Write(b)
 		w.Header().Add("Content-Type", "application/vnd.apple.mpegurl")
 	} else {
-		fmt.Println("request fmp4", r.URL.Path)
+		log.Println("request fmp4", r.URL.Path)
 		fmp4File := strings.TrimLeft(r.URL.Path, "/vod/")
 		fmp4, err := os.Open(fmp4File)
 		if err != nil {
@@ -156,7 +157,7 @@ func onH265HLSVod(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 }
 
-//http://127.0.0.1:19999/vod/test.m3u8
+// http://127.0.0.1:19999/vod/test.m3u8
 func main() {
 	generateH265M3U8(os.Args[1])
 	mux := http.NewServeMux()
@@ -167,7 +168,7 @@ func main() {
 		ReadTimeout:  time.Second * 10,
 		WriteTimeout: time.Second * 10,
 	}
-	fmt.Println("server.listen")
-	fmt.Println(server.ListenAndServe())
+	log.Println("server.listen")
+	log.Println(server.ListenAndServe())
 
 }

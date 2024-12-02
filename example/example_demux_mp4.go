@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/yapingcat/gomedia/go-mp4"
@@ -17,25 +18,25 @@ func main() {
 	flag.Parse()
 	f, err := os.Open(*mp4filename)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer f.Close()
 	vfile, err := os.OpenFile(*rawvideo, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer vfile.Close()
 	afile, err := os.OpenFile(*rawaudio, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer afile.Close()
 	demuxer := mp4.CreateMp4Demuxer(f)
 	if infos, err := demuxer.ReadHead(); err != nil && err != io.EOF {
-		fmt.Println(err)
+		log.Println(err)
 	} else {
 		fmt.Printf("%+v\n", infos)
 	}
@@ -44,7 +45,7 @@ func main() {
 	for {
 		pkg, err := demuxer.ReadPacket()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		fmt.Printf("track:%d,cid:%+v,pts:%d dts:%d\n", pkg.TrackId, pkg.Cid, pkg.Pts, pkg.Dts)

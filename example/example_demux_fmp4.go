@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/yapingcat/gomedia/go-mp4"
@@ -11,7 +12,7 @@ func main() {
 	fmp4File := os.Args[1]
 	fmp4, err := os.Open(fmp4File)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer fmp4.Close()
@@ -32,7 +33,7 @@ func main() {
 		if err != nil {
 			break
 		}
-		fmt.Println(pkg.Cid, pkg.Pts, pkg.Dts, len(pkg.Data))
+		log.Println(pkg.Cid, pkg.Pts, pkg.Dts, len(pkg.Data))
 		if pkg.Cid == mp4.MP4_CODEC_H264 {
 			videof.Write(pkg.Data)
 		} else if pkg.Cid == mp4.MP4_CODEC_AAC {

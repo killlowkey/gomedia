@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -12,14 +12,14 @@ import (
 )
 
 func onHttpFlv(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("on http flv")
+	log.Println("on http flv")
 	w.Header().Set("Content-Type", "video/x-flv")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	streamName := r.URL.Path
 	streamName = strings.TrimLeft(streamName, "/live/")
-	fmt.Println("start go routine", streamName)
+	log.Println("start go routine", streamName)
 	reader := flv.CreateFlvReader()
 	writer := flv.CreateFlvWriter(w)
 	writer.WriteFlvHeader()
@@ -27,7 +27,7 @@ func onHttpFlv(w http.ResponseWriter, r *http.Request) {
 		if cid == codec.CODECID_AUDIO_AAC {
 			writer.WriteAAC(frame, pts, dts)
 		} else if cid == codec.CODECID_VIDEO_H264 {
-			fmt.Println(len(frame))
+			log.Println(len(frame))
 			if codec.IsH264VCLNaluType(codec.H264NaluType(frame)) {
 				time.Sleep(time.Millisecond * 40)
 			}
@@ -37,12 +37,12 @@ func onHttpFlv(w http.ResponseWriter, r *http.Request) {
 
 	fileReader, err := os.Open(streamName)
 	defer fileReader.Close()
-	fmt.Println(err)
+	log.Println(err)
 	cache := make([]byte, 4096)
 	for {
 		n, err := fileReader.Read(cache)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		reader.Input(cache[0:n])
@@ -58,7 +58,7 @@ func main() {
 		ReadTimeout:  time.Second * 1200,
 		WriteTimeout: time.Second * 1200,
 	}
-	fmt.Println("server.listen")
-	fmt.Println(server.ListenAndServe())
+	log.Println("server.listen")
+	log.Println(server.ListenAndServe())
 	select {}
 }

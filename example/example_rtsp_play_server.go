@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -56,7 +56,7 @@ func (server *RtspPlaySeverSession) Start() {
 	for {
 		n, err := server.c.Read(buf)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		svr.Input(buf[:n])
@@ -72,12 +72,12 @@ func (server *RtspPlaySeverSession) Stop() {
 }
 
 func (server *RtspPlaySeverSession) HandleOption(svr *rtsp.RtspServer, req rtsp.RtspRequest, res *rtsp.RtspResponse) {
-	fmt.Println("handle option")
+	log.Println("handle option")
 }
 
 func (server *RtspPlaySeverSession) HandleDescribe(svr *rtsp.RtspServer, req rtsp.RtspRequest, res *rtsp.RtspResponse) {
-	fmt.Println("handle describe")
-	fmt.Println("add video track")
+	log.Println("handle describe")
+	log.Println("add video track")
 	//rfc1890 MP2T payload type is 33
 	videoTrack := rtsp.NewVideoTrack(rtsp.RtspCodec{Cid: rtsp.RTSP_CODEC_TS, PayloadType: 33, SampleRate: 90000})
 	svr.AddTrack(videoTrack)
@@ -87,7 +87,7 @@ func (server *RtspPlaySeverSession) HandleDescribe(svr *rtsp.RtspServer, req rts
 }
 
 func (server *RtspPlaySeverSession) HandleSetup(svr *rtsp.RtspServer, req rtsp.RtspRequest, res *rtsp.RtspResponse, transport *rtsp.RtspTransport, track *rtsp.RtspTrack) {
-	fmt.Println("handle setup", *transport)
+	log.Println("handle setup", *transport)
 	if transport.Proto == rtsp.UDP {
 		transport.Server_ports[0] = uint16(server.senders[track.TrackName].rtpPort)
 		transport.Server_ports[1] = uint16(server.senders[track.TrackName].rtcpPort)
@@ -102,10 +102,10 @@ func (server *RtspPlaySeverSession) HandleSetup(svr *rtsp.RtspServer, req rtsp.R
 		server.senders[track.TrackName].rtcp, _ = net.DialUDP("udp4", &srcAddr2, &dstAddr2)
 		track.OpenTrack()
 		track.OnPacket(func(b []byte, isRtcp bool) (err error) {
-			if isRtcp {
-				fmt.Println("send rtcp packet")
+			if isRtcp { // 传输控制信息和质量反馈
+				log.Println("send rtcp packet")
 				_, err = server.senders[track.TrackName].rtcp.Write(b)
-			} else {
+			} else { // 音视频包
 				_, err = server.senders[track.TrackName].rtp.Write(b)
 			}
 			return
@@ -118,7 +118,7 @@ func (server *RtspPlaySeverSession) HandleSetup(svr *rtsp.RtspServer, req rtsp.R
 }
 
 func (server *RtspPlaySeverSession) HandlePlay(svr *rtsp.RtspServer, req rtsp.RtspRequest, res *rtsp.RtspResponse, timeRange *rtsp.RangeTime, info []*rtsp.RtpInfo) {
-	fmt.Println("handle play")
+	log.Println("handle play")
 	streamName := req.Uri[strings.LastIndex(req.Uri, "/")+1:]
 	fileName := "./testData/" + streamName + ".flv"
 	go func() {
@@ -131,16 +131,18 @@ func (server *RtspPlaySeverSession) HandlePlay(svr *rtsp.RtspServer, req rtsp.Rt
 		rtpPkgs := make([]byte, 0, 1400)
 		var muxer *mpeg2.TSMuxer = nil
 		var pid uint16 = 0
-		// 读取 flv 每一帧
+		// 读取 flv 每一帧，数据来源 fr.Input
 		fr.OnFrame = func(ci codec.CodecID, b []byte, pts, dts uint32) {
 			if muxer == nil {
+				// ts 处理，数据来源 muxer.Write
 				muxer = mpeg2.NewTSMuxer()
+				// 发送给 track，触发 track.OnPacket，发送 rtp 包
 				muxer.OnPacket = func(pkg []byte) {
 					if newFrame || (len(rtpPkgs)+len(pkg) > 1400) {
 						// track 中 sample 是一段视频、音频数据
 						err := server.senders["video"].track.WriteSample(rtsp.RtspSample{Sample: rtpPkgs, Timestamp: currentTs * 90})
 						if err != nil {
-							fmt.Println(err)
+							log.Println(err)
 						}
 						rtpPkgs = rtpPkgs[:0]
 						if newFrame {
@@ -152,6 +154,7 @@ func (server *RtspPlaySeverSession) HandlePlay(svr *rtsp.RtspServer, req rtsp.Rt
 				pid = muxer.AddStream(mpeg2.TS_STREAM_H264)
 			}
 
+			// 写入到 mutex 中
 			if ci == codec.CODECID_VIDEO_H264 {
 				newFrame = true
 				currentTs = dts
@@ -164,7 +167,7 @@ func (server *RtspPlaySeverSession) HandlePlay(svr *rtsp.RtspServer, req rtsp.Rt
 		for {
 			n, err := flvFileReader.Read(cache)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				break
 			}
 			// 交由解码器处理
@@ -182,11 +185,12 @@ func (server *RtspPlaySeverSession) HandlePlay(svr *rtsp.RtspServer, req rtsp.Rt
 		for {
 			select {
 			case <-rtcpTimer.C:
+				// 每3s 触发 OnPacket 动作，send rtcp packet 写入 rtcp 包
 				for _, sender := range server.senders {
 					err := sender.track.SendReport()
-					fmt.Println("send report")
+					log.Println("send report")
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 						return
 					}
 				}
@@ -202,10 +206,10 @@ func (server *RtspPlaySeverSession) HandlePlay(svr *rtsp.RtspServer, req rtsp.Rt
 			for {
 				n, err := sender.rtcp.Read(buf)
 				if err != nil {
-					fmt.Println(err)
+					log.Println(err)
 					break
 				}
-				fmt.Println("read rtcp packet ", n)
+				log.Println("read rtcp packet ", n)
 				sender.track.Input(buf[:n], true)
 			}
 		}()

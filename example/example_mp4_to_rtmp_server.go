@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -54,7 +55,7 @@ func main() {
 	)
 	c, err := net.Dial("tcp4", "${rtmp_host}:${rtmp_port}") // like 127.0.0.1:1935
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	cli := rtmp.NewRtmpClient(rtmp.WithComplexHandshake(),
 		rtmp.WithComplexHandshakeSchema(rtmp.HANDSHAKE_COMPLEX_SCHEMA0),
@@ -68,7 +69,7 @@ func main() {
 	})
 	cli.OnStateChange(func(newState rtmp.RtmpState) {
 		if newState == rtmp.STATE_RTMP_PUBLISH_START {
-			fmt.Println("ready for publish")
+			log.Println("ready for publish")
 			close(isReady)
 		}
 	})
@@ -78,14 +79,14 @@ func main() {
 	})
 	go func() {
 		<-isReady
-		fmt.Println("start to read file")
+		log.Println("start to read file")
 		for {
 			filees, err := os.ReadDir(mp4Path)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				return
 			}
-			fmt.Println(mp4Path + filees[len(filees)-1].Name())
+			log.Println(mp4Path + filees[len(filees)-1].Name())
 			PushRtmp(mp4Path+filees[len(filees)-1].Name(), cli)
 		}
 	}()
@@ -98,22 +99,22 @@ func main() {
 		if err != nil {
 			continue
 		}
-		fmt.Println("read byte", n)
+		log.Println("read byte", n)
 		cli.Input(buf[:n])
 	}
-	fmt.Println(err)
+	log.Println(err)
 }
 
 func PushRtmp(fileName string, cli *rtmp.RtmpClient) {
 	mp4File, err := os.Open(fileName)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer mp4File.Close()
 	demuxer := mp4.CreateMp4Demuxer(mp4File)
 	if infos, err := demuxer.ReadHead(); err != nil && err != io.EOF {
-		fmt.Println(err)
+		log.Println(err)
 	} else {
 		fmt.Printf("%+v\n", infos)
 	}
@@ -123,7 +124,7 @@ func PushRtmp(fileName string, cli *rtmp.RtmpClient) {
 	for {
 		pkg, err := demuxer.ReadPacket()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		if pkg.Cid == mp4.MP4_CODEC_H264 {

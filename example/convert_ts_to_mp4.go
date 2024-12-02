@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/yapingcat/gomedia/go-mp4"
@@ -83,5 +84,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("done: ", tsFileName, "->", mp4FileName)
+	log.Println("done: ", tsFileName, "->", mp4FileName)
 }

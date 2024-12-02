@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/yapingcat/gomedia/go-codec"
@@ -13,7 +13,7 @@ func main() {
 	filename := os.Args[1]
 	f, err := os.Open(filename)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer f.Close()
@@ -21,14 +21,14 @@ func main() {
 	tsfilename := os.Args[2]
 	tsf, err := os.OpenFile(tsfilename, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer tsf.Close()
 
 	muxer := mpeg2.NewTSMuxer()
 	muxer.OnPacket = func(pkg []byte) {
-		fmt.Println("write aac packet")
+		log.Println("write aac packet")
 		tsf.Write(pkg)
 	}
 
@@ -48,7 +48,7 @@ func main() {
 			dts += 24
 			i = 0
 		}
-		fmt.Println(muxer.Write(pid, aac, pts, dts))
+		log.Println(muxer.Write(pid, aac, pts, dts))
 	})
 
 }

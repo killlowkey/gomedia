@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/yapingcat/gomedia/go-codec"
@@ -13,7 +13,7 @@ func main() {
 	filename := os.Args[1]
 	f, err := os.Open(filename)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer f.Close()
@@ -21,7 +21,7 @@ func main() {
 	tsfilename := os.Args[2]
 	tsf, err := os.OpenFile(tsfilename, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer tsf.Close()
@@ -40,7 +40,7 @@ func main() {
 		sampleRate := head.GetSampleRate()
 		delta := sampleSize * 1000 / sampleRate
 		muxer.Write(pid, frame, pts, dts)
-		fmt.Println("write pts:", pts, "dts:", dts)
+		log.Println("write pts:", pts, "dts:", dts)
 		pts += uint64(delta)
 		dts = pts
 	})

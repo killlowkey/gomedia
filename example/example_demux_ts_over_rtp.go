@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -40,11 +40,11 @@ func (r *RtpReceiver) Read(p []byte) (n int, err error) {
 		}
 		readBytes, err = r.conn.Read(r.buf)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return 0, err
 		}
 		if readBytes <= RTP_FIX_HEAD_LEN {
-			fmt.Println("rtp payload length == 0")
+			log.Println("rtp payload length == 0")
 			continue
 		}
 		//filter out rtp head
@@ -61,8 +61,8 @@ func (r *RtpReceiver) Read(p []byte) (n int, err error) {
 var videoFile = flag.String("videofile", "v.h264", "export raw video data to the videofile")
 var audioFile = flag.String("audiofile", "a.aac", "export raw audio data to the audiofile")
 
-//use ffmpeg commad to test this example
-//ffmpeg -re -i <media file> -vcodec copy -acodec copy -f rtp_mpegts rtp://127.0.0.1:19999
+// use ffmpeg commad to test this example
+// ffmpeg -re -i <media file> -vcodec copy -acodec copy -f rtp_mpegts rtp://127.0.0.1:19999
 func main() {
 	flag.Parse()
 
@@ -88,7 +88,7 @@ func main() {
 			if v == nil {
 				v, _ = os.OpenFile(*videoFile, os.O_CREATE|os.O_RDWR, 0666)
 			}
-			fmt.Println("Got H264 Frame:", "pts:", pts, "dts:", dts, "Frame len:", len(frame))
+			log.Println("Got H264 Frame:", "pts:", pts, "dts:", dts, "Frame len:", len(frame))
 			v.Write(frame)
 		} else if cid == mpeg2.TS_STREAM_AAC {
 			if a == nil {
@@ -97,5 +97,5 @@ func main() {
 			a.Write(frame)
 		}
 	}
-	fmt.Println(demuxer.Input(NewRtpReceiver(c)))
+	log.Println(demuxer.Input(NewRtpReceiver(c)))
 }

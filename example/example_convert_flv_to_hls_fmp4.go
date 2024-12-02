@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -15,17 +16,17 @@ import (
 	"github.com/yapingcat/gomedia/go-mp4"
 )
 
-type hlsSegment struct {
+type hlsSegment1 struct {
 	duration float32
 	uri      string
 }
 
-type hlsMuxer struct {
+type hlsMuxer1 struct {
 	initUri  string
-	segments []hlsSegment
+	segments []hlsSegment1
 }
 
-func (muxer *hlsMuxer) makeM3u8() string {
+func (muxer *hlsMuxer1) makeM3u8() string {
 	buf := make([]byte, 0, 4096)
 	m3u := bytes.NewBuffer(buf)
 	maxDuration := 0
@@ -51,7 +52,7 @@ func (muxer *hlsMuxer) makeM3u8() string {
 }
 
 func generateM3U8(flvFile string) {
-	hls := &hlsMuxer{}
+	hls := &hlsMuxer1{}
 	var muxer *mp4.Movmuxer = nil
 	var vtid uint32
 	var atid uint32
@@ -59,17 +60,17 @@ func generateM3U8(flvFile string) {
 	filename := fmt.Sprintf("stream-%d.mp4", i)
 	mp4file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	muxer, err = mp4.CreateMp4Muxer(mp4file, mp4.WithMp4Flag(mp4.MP4_FLAG_DASH))
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	muxer.OnNewFragment(func(duration uint32, firstPts, firstDts uint64) {
-		fmt.Println("on segment", duration)
-		hls.segments = append(hls.segments, hlsSegment{
+		log.Println("on segment", duration)
+		hls.segments = append(hls.segments, hlsSegment1{
 			uri:      filename,
 			duration: float32(duration) / 1000,
 		})
@@ -86,7 +87,7 @@ func generateM3U8(flvFile string) {
 		filename = fmt.Sprintf("stream-%d.mp4", i)
 		mp4file, err = os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		muxer.ReBindWriter(mp4file)
@@ -102,12 +103,12 @@ func generateM3U8(flvFile string) {
 		if ci == codec.CODECID_AUDIO_AAC {
 			err := muxer.Write(atid, b, uint64(pts), uint64(dts))
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
 		} else if ci == codec.CODECID_VIDEO_H264 {
 			err := muxer.Write(vtid, b, uint64(pts), uint64(dts))
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
 		}
 	}
@@ -116,7 +117,7 @@ func generateM3U8(flvFile string) {
 	for {
 		n, err := flvfilereader.Read(cache)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		fr.Input(cache[0:n])
@@ -132,7 +133,7 @@ func generateM3U8(flvFile string) {
 func onHLSVod(w http.ResponseWriter, r *http.Request) {
 	buf := bytes.NewBuffer(make([]byte, 0, 1024*1024))
 	if strings.LastIndex(r.URL.Path, "m3u8") != -1 {
-		fmt.Println("request m3u8", r.URL.Path)
+		log.Println("request m3u8", r.URL.Path)
 		m3u8, err := os.Open("test.m3u8")
 		if err != nil {
 			return
@@ -142,7 +143,7 @@ func onHLSVod(w http.ResponseWriter, r *http.Request) {
 		buf.Write(b)
 		w.Header().Add("Content-Type", "application/vnd.apple.mpegurl")
 	} else {
-		fmt.Println("request fmp4", r.URL.Path)
+		log.Println("request fmp4", r.URL.Path)
 		fmp4File := strings.TrimLeft(r.URL.Path, "/vod/")
 		fmp4, err := os.Open(fmp4File)
 		if err != nil {
@@ -160,7 +161,7 @@ func onHLSVod(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 }
 
-//http://127.0.0.1:19999/vod/test.m3u8
+// http://127.0.0.1:19999/vod/test.m3u8
 func main() {
 	generateM3U8(os.Args[1])
 
@@ -172,7 +173,7 @@ func main() {
 		ReadTimeout:  time.Second * 10,
 		WriteTimeout: time.Second * 10,
 	}
-	fmt.Println("server.listen")
-	fmt.Println(server.ListenAndServe())
+	log.Println("server.listen")
+	log.Println(server.ListenAndServe())
 
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/yapingcat/gomedia/go-codec"
@@ -20,10 +20,10 @@ func main() {
 		if ci == codec.CODECID_AUDIO_AAC {
 			fw.WriteAAC(b, pts, dts)
 		} else if ci == codec.CODECID_AUDIO_MP3 {
-			fmt.Println("write mp3 frame")
+			log.Println("write mp3 frame")
 			fw.WriteMp3(b, pts, dts)
 		} else if ci == codec.CODECID_VIDEO_H264 {
-			fmt.Println("write H264 frame")
+			log.Println("write H264 frame")
 			fw.WriteH264(b, pts, dts)
 		} else if ci == codec.CODECID_VIDEO_H265 {
 			fw.WriteH265(b, pts, dts)
@@ -34,7 +34,7 @@ func main() {
 	for {
 		n, err := flvfilereader.Read(cache)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 		fr.Input(cache[0:n])
